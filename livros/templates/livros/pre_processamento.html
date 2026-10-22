@@ -1,0 +1,76 @@
+{% extends "livros/base.html" %}
+
+{% block titulo %}Pré-processamento{% endblock %}
+
+{% block conteudo %}
+<h1>Pré-processamento de textos</h1>
+<p class="subtitulo">
+  Veja o que acontece com um comentário a cada passo antes de ele ser analisado.
+  Os textos do dataset estão em inglês.
+</p>
+
+<form class="formulario" method="get" action="{% url 'livros:pre_processamento' %}">
+  <input type="hidden" name="enviado" value="1">
+  <label for="texto">Comentário</label>
+  <textarea id="texto" name="texto" rows="5" maxlength="5000" placeholder="Cole ou escreva um comentário em inglês">{{ texto }}</textarea>
+  <label class="opcao">
+    <input type="checkbox" name="negacoes"{% if manter_negacoes %} checked{% endif %}>
+    Manter negações (<code>not</code>, <code>no</code>, <code>don't</code>…) para não inverter o sentido
+  </label>
+  <div class="acoes">
+    <button class="botao" type="submit">Processar</button>
+    <button class="botao botao-secundario" type="submit" name="sortear" value="1">Sortear avaliação do CSV</button>
+  </div>
+  {% if sorteado %}<p class="nota">Avaliação sorteada do CSV.</p>{% endif %}
+</form>
+
+{% if erro_nltk %}
+<div class="aviso aviso-erro" role="alert">
+  <strong>Não foi possível usar o NLTK.</strong>
+  <p>{{ erro_nltk }}</p>
+</div>
+{% else %}
+<ol class="passos">
+  <li class="passo">
+    <h2>1. Texto original</h2>
+    <p class="bloco">{{ resultado.original }}</p>
+  </li>
+
+  <li class="passo">
+    <h2>2. Limpeza e minúsculas</h2>
+    <p class="explicacao">Remove tags HTML, links, números, pontuação e caracteres especiais, e converte tudo para minúsculas.</p>
+    <p class="bloco">{{ resultado.limpo|default:"(nada sobrou do texto)" }}</p>
+  </li>
+
+  <li class="passo">
+    <h2>3. Tokenização <span class="contagem">{{ resultado.tokens|length }} tokens</span></h2>
+    <p class="explicacao">Separa o texto em palavras.</p>
+    <p class="fichas">{% for token in resultado.tokens %}<span class="ficha">{{ token }}</span>{% empty %}<span class="nota">Nenhum token.</span>{% endfor %}</p>
+  </li>
+
+  <li class="passo">
+    <h2>4. Remoção de stopwords <span class="contagem">{{ resultado.sem_stopwords|length }} tokens</span></h2>
+    <p class="explicacao">Tira palavras muito comuns (artigos, preposições…) que pouco ajudam a identificar o sentimento.</p>
+    <p class="fichas">{% for token in resultado.sem_stopwords %}<span class="ficha">{{ token }}</span>{% empty %}<span class="nota">Nenhum token.</span>{% endfor %}</p>
+    {% if resultado.removidas %}
+    <p class="rotulo">Removidas ({{ resultado.removidas|length }}):</p>
+    <p class="fichas">{% for token in resultado.removidas %}<span class="ficha ficha-removida">{{ token }}</span>{% endfor %}</p>
+    {% endif %}
+  </li>
+
+  <li class="passo">
+    <h2>5. Lematização <span class="contagem">{{ resultado.lematizados|length }} tokens</span></h2>
+    <p class="explicacao">Leva cada palavra à forma base (<code>loved</code> → <code>love</code>, <code>books</code> → <code>book</code>). Em destaque, as que mudaram.</p>
+    <p class="fichas">{% for par in resultado.pares %}<span class="ficha{% if par.mudou %} ficha-mudou{% endif %}">{{ par.lema }}{% if par.mudou %}<small>← {{ par.palavra }}</small>{% endif %}</span>{% empty %}<span class="nota">Nenhum token.</span>{% endfor %}</p>
+  </li>
+
+  <li class="passo">
+    <h2>Extra: stemming <span class="contagem">comparação</span></h2>
+    <p class="explicacao">O stemming corta o final das palavras em vez de procurar a forma base, e pode gerar radicais que não existem (<code>movie</code> → <code>movi</code>).</p>
+    <p class="fichas">{% for radical in resultado.radicais %}<span class="ficha">{{ radical }}</span>{% empty %}<span class="nota">Nenhum token.</span>{% endfor %}</p>
+  </li>
+</ol>
+
+<p><a class="botao botao-secundario" href="{% url 'livros:corpus' %}{% if not manter_negacoes %}?enviado=1{% endif %}">Ver o efeito em várias avaliações do CSV</a></p>
+{% endif %}
+{% endblock %}

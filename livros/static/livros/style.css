@@ -178,6 +178,83 @@ td.alerta { color: var(--atencao); font-weight: 600; }
 code { font-size: 0.88em; }
 .amostra td { min-width: 110px; max-width: 320px; }
 
+/* Formulário */
+.formulario {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.formulario > label:not(.opcao) { font-weight: 600; }
+.formulario-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+textarea {
+  width: 100%;
+  font: inherit;
+  color: var(--texto);
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+textarea:focus-visible { outline: 2px solid var(--destaque); outline-offset: 1px; }
+.opcao { display: flex; align-items: center; gap: 8px; color: var(--texto-suave); font-size: 0.95rem; }
+.acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+button.botao { border: 0; cursor: pointer; font: inherit; font-weight: 600; margin-top: 0; }
+.botao-secundario {
+  background: var(--destaque-claro);
+  color: var(--destaque-escuro);
+}
+.botao-secundario:hover { background: var(--borda); color: var(--texto); }
+@media (prefers-color-scheme: dark) {
+  .botao-secundario, .botao-secundario:hover { color: var(--destaque-escuro); }
+  .botao-secundario:hover { background: var(--borda); }
+}
+.nota { color: var(--texto-suave); font-size: 0.9rem; margin: 0; }
+p.nota { margin-bottom: 8px; }
+
+/* Aviso de erro */
+.aviso {
+  border-radius: var(--raio);
+  padding: 14px 16px;
+  margin: 16px 0;
+}
+.aviso p { margin: 4px 0 0; }
+.aviso-erro { background: var(--atencao-claro); border: 1px solid var(--atencao); color: var(--texto); }
+
+/* Passo a passo do pré-processamento */
+.passos { list-style: none; margin: 24px 0; padding: 0; display: grid; gap: 12px; }
+.passo {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 14px 16px;
+}
+.passo h2 { margin: 0 0 4px; font-size: 1.05rem; }
+.contagem { font-size: 0.8rem; font-weight: 600; color: var(--destaque-escuro); background: var(--destaque-claro); padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+.explicacao { color: var(--texto-suave); font-size: 0.92rem; margin-bottom: 8px; }
+.bloco { background: var(--fundo); border-radius: 8px; padding: 10px 12px; margin: 0; overflow-wrap: anywhere; }
+.rotulo { margin: 10px 0 4px; font-size: 0.88rem; color: var(--texto-suave); }
+.fichas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.ficha {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.9rem;
+}
+.ficha small { color: var(--texto-suave); margin-left: 6px; font-size: 0.75rem; }
+.ficha-removida { text-decoration: line-through; color: var(--texto-suave); }
+.ficha-mudou { border-color: var(--destaque); background: var(--destaque-claro); }
+
+/* Barras do vocabulário */
+.coluna-barra { min-width: 160px; }
+.barra { height: 10px; background: var(--borda); border-radius: 999px; overflow: hidden; }
+.barra div { height: 100%; background: var(--destaque); border-radius: 999px; }
+
 /* Rodapé */
 .rodape {
   border-top: 1px solid var(--borda);

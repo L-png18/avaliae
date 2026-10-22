@@ -98,3 +98,12 @@ def resumo_dataset(df: pd.DataFrame) -> dict:
         "cabecalho_amostra": colunas_originais,
         "linhas_amostra": linhas_amostra,
     }
+
+
+def sortear_avaliacao(df: pd.DataFrame, minimo: int = 80, maximo: int = 500) -> str:
+    """Sorteia o texto de uma avaliação (de tamanho médio, boa para visualizar)."""
+    textos = df["review/text"].fillna("")
+    candidatos = textos[textos.str.len().between(minimo, maximo)]
+    if candidatos.empty:
+        candidatos = textos
+    return str(candidatos.sample(n=1).iloc[0])

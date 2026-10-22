@@ -1,0 +1,88 @@
+{% extends "livros/base.html" %}
+
+{% block titulo %}Efeito no corpus{% endblock %}
+
+{% block conteudo %}
+<h1>Efeito do pré-processamento no corpus</h1>
+<p class="subtitulo">
+  O objetivo é reduzir a dimensionalidade: menos palavras diferentes para o modelo aprender.
+  <a href="{% url 'livros:pre_processamento' %}">Voltar ao passo a passo</a>
+</p>
+
+<form class="formulario formulario-linha" method="get" action="{% url 'livros:corpus' %}">
+  <input type="hidden" name="enviado" value="1">
+  <label class="opcao">
+    <input type="checkbox" name="negacoes"{% if manter_negacoes %} checked{% endif %}>
+    Manter negações
+  </label>
+  <button class="botao botao-secundario" type="submit">Recalcular</button>
+</form>
+
+{% if erro_nltk %}
+<div class="aviso aviso-erro" role="alert">
+  <strong>Não foi possível usar o NLTK.</strong>
+  <p>{{ erro_nltk }}</p>
+</div>
+{% else %}
+<p class="nota">Calculado sobre uma amostra fixa de {{ total_textos }} avaliações do CSV, para a página abrir rápido.</p>
+
+<section>
+  <h2>Tamanho do texto e do vocabulário</h2>
+  <div class="tabela-rolavel">
+    <table>
+      <thead>
+        <tr>
+          <th>Etapa</th>
+          <th class="num">Tokens</th>
+          <th class="num">Palavras diferentes</th>
+          <th class="num">Redução</th>
+          <th>Vocabulário</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for etapa in etapas %}
+        <tr>
+          <td>{{ etapa.nome }}</td>
+          <td class="num">{{ etapa.total_tokens }}</td>
+          <td class="num">{{ etapa.vocabulario }}</td>
+          <td class="num">{{ etapa.reducao }}</td>
+          <td class="coluna-barra"><div class="barra" role="img" aria-label="{{ etapa.largura }}% do vocabulário inicial"><div style="width: {{ etapa.largura|stringformat:'d' }}%"></div></div></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="nota">O stemming é calculado a partir das palavras sem stopwords, só para comparar com a lematização.</p>
+</section>
+
+<section>
+  <h2>Palavras mais frequentes (após lematização)</h2>
+  <div class="tabela-rolavel">
+    <table>
+      <thead><tr><th>Palavra</th><th class="num">Ocorrências</th></tr></thead>
+      <tbody>
+        {% for item in mais_frequentes %}
+        <tr><td>{{ item.palavra }}</td><td class="num">{{ item.frequencia }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Antes e depois</h2>
+  <div class="tabela-rolavel">
+    <table>
+      <thead><tr><th>Original</th><th>Depois do pré-processamento</th></tr></thead>
+      <tbody>
+        {% for exemplo in exemplos %}
+        <tr><td>{{ exemplo.original }}</td><td>{{ exemplo.final }}</td></tr>
+        {% empty %}
+        <tr><td colspan="2">Sem exemplos curtos na amostra.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
