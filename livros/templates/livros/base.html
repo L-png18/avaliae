@@ -1,0 +1,28 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Início{% endblock %} · Avaliações de Livros</title>
+  <link rel="stylesheet" href="{% static 'livros/style.css' %}">
+</head>
+<body>
+  <header class="topo">
+    <div class="container topo-conteudo">
+      <a class="marca" href="{% url 'livros:inicio' %}">Livros<span>PLN</span></a>
+      <nav aria-label="Principal">
+        <a href="{% url 'livros:inicio' %}"{% if request.resolver_match.url_name == 'inicio' %} aria-current="page"{% endif %}>Início</a>
+        <a href="{% url 'livros:base_dados' %}"{% if request.resolver_match.url_name == 'base_dados' %} aria-current="page"{% endif %}>Base de dados</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block conteudo %}{% endblock %}
+  </main>
+
+  <footer class="rodape">
+    <div class="container">Tópicos Especiais de Programação · Pré-processamento de textos</div>
+  </footer>
+</body>
+</html>

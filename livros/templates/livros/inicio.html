@@ -1,0 +1,30 @@
+{% extends "livros/base.html" %}
+
+{% block titulo %}Início{% endblock %}
+
+{% block conteudo %}
+<section class="destaque">
+  <h1>Avaliações de livros da Amazon</h1>
+  <p>
+    Projeto de processamento de linguagem natural: vamos preparar os textos das
+    avaliações e descobrir se cada comentário é positivo ou negativo.
+  </p>
+  <a class="botao" href="{% url 'livros:base_dados' %}">Ver a base de dados</a>
+</section>
+
+<section>
+  <h2>Etapas do projeto</h2>
+  <ol class="etapas">
+    {% for etapa in etapas %}
+    <li class="etapa etapa-{{ etapa.status }}">
+      <span class="etapa-numero">{{ etapa.numero }}</span>
+      <div class="etapa-corpo">
+        <h3>{{ etapa.titulo }}</h3>
+        <p>{{ etapa.descricao }}</p>
+      </div>
+      <span class="selo selo-{{ etapa.status }}">{{ etapa.status_texto }}</span>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

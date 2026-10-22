@@ -1,0 +1,58 @@
+{% extends "livros/base.html" %}
+
+{% block titulo %}Base de dados{% endblock %}
+
+{% block conteudo %}
+<h1>Base de dados</h1>
+<p class="subtitulo">
+  Avaliações feitas por usuários na Amazon, de {{ primeira_avaliacao }} a {{ ultima_avaliacao }}.
+</p>
+
+<section class="cartoes" aria-label="Números gerais">
+  <div class="cartao"><strong>{{ total_linhas }}</strong><span>avaliações (linhas)</span></div>
+  <div class="cartao"><strong>{{ total_colunas }}</strong><span>colunas</span></div>
+  <div class="cartao"><strong>{{ livros_unicos }}</strong><span>títulos distintos</span></div>
+  <div class="cartao"><strong>{{ usuarios_unicos }}</strong><span>usuários identificados</span></div>
+</section>
+
+<section>
+  <h2>Colunas</h2>
+  <div class="tabela-rolavel">
+    <table>
+      <thead>
+        <tr><th>Coluna</th><th>Descrição</th><th>Tipo</th><th class="num">Nulos</th></tr>
+      </thead>
+      <tbody>
+        {% for coluna in colunas %}
+        <tr>
+          <td><code>{{ coluna.nome }}</code></td>
+          <td>{{ coluna.descricao }}</td>
+          <td>{{ coluna.tipo }}</td>
+          <td class="num{% if coluna.tem_nulos %} alerta{% endif %}">{{ coluna.nulos }} ({{ coluna.percentual_nulos }})</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Primeiras avaliações</h2>
+  <div class="tabela-rolavel">
+    <table class="amostra">
+      <thead>
+        <tr>
+          {% for titulo in cabecalho_amostra %}<th>{{ titulo }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in linhas_amostra %}
+        <tr>
+          {% for valor in linha %}<td>{{ valor }}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
