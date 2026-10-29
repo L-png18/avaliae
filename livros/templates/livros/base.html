@@ -14,6 +14,7 @@
         <a href="{% url 'livros:inicio' %}"{% if request.resolver_match.url_name == 'inicio' %} aria-current="page"{% endif %}>Início</a>
         <a href="{% url 'livros:base_dados' %}"{% if request.resolver_match.url_name == 'base_dados' %} aria-current="page"{% endif %}>Base de dados</a>
         <a href="{% url 'livros:pre_processamento' %}"{% if request.resolver_match.url_name == 'pre_processamento' or request.resolver_match.url_name == 'corpus' %} aria-current="page"{% endif %}>Pré-processamento</a>
+        <a href="{% url 'livros:sentimento' %}"{% if request.resolver_match.url_name == 'sentimento' or request.resolver_match.url_name == 'sentimento_corpus' %} aria-current="page"{% endif %}>Sentimento</a>
       </nav>
     </div>
   </header>

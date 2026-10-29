@@ -9,6 +9,8 @@
   --destaque-claro: #e4efea;
   --atencao: #a15c00;
   --atencao-claro: #fbeedb;
+  --negativo: #a3342b;
+  --negativo-claro: #f8e3e0;
   --raio: 10px;
 }
 
@@ -24,6 +26,8 @@
     --destaque-claro: #1f2f2a;
     --atencao: #f0b46a;
     --atencao-claro: #332a1c;
+    --negativo: #f08a80;
+    --negativo-claro: #351f1d;
   }
 }
 
@@ -84,6 +88,7 @@ h2 { font-size: 1.25rem; margin: 36px 0 12px; }
 h3 { font-size: 1.05rem; margin: 0 0 2px; }
 p { margin: 0 0 12px; }
 .subtitulo { color: var(--texto-suave); margin-bottom: 24px; }
+.subtitulo a { color: var(--destaque); }
 
 /* Destaque da página inicial */
 .destaque {
@@ -254,6 +259,75 @@ p.nota { margin-bottom: 8px; }
 .coluna-barra { min-width: 160px; }
 .barra { height: 10px; background: var(--borda); border-radius: 999px; overflow: hidden; }
 .barra div { height: 100%; background: var(--destaque); border-radius: 999px; }
+
+/* Aviso de atenção / informação */
+.aviso-atencao { background: var(--atencao-claro); border: 1px solid var(--atencao); color: var(--texto); }
+.aviso-info { background: var(--destaque-claro); border: 1px solid var(--destaque); color: var(--texto); }
+
+/* Análise de sentimento (VADER) */
+.veredito {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--borda);
+  color: var(--texto-suave);
+}
+.veredito-positivo { background: var(--destaque-claro); color: var(--destaque-escuro); }
+.veredito-negativo { background: var(--negativo-claro); color: var(--negativo); }
+.veredito-neutro { background: var(--borda); color: var(--texto-suave); }
+
+.resultado-linha { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.resultado-linha .numero { font-size: 1.7rem; font-weight: 700; line-height: 1.2; }
+
+.medidor { position: relative; height: 12px; margin: 8px 0 4px; }
+.medidor-trilho {
+  height: 100%;
+  border-radius: 999px;
+  /* -1 a -0,05 negativo | -0,05 a 0,05 neutro | 0,05 a 1 positivo */
+  background: linear-gradient(
+    to right,
+    var(--negativo) 0 47.5%,
+    var(--borda) 47.5% 52.5%,
+    var(--destaque) 52.5% 100%
+  );
+  opacity: 0.85;
+}
+.medidor-marca {
+  position: absolute;
+  top: -4px;
+  width: 4px;
+  height: 20px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--texto);
+  box-shadow: 0 0 0 2px var(--superficie);
+}
+.medidor-escala { display: flex; justify-content: space-between; color: var(--texto-suave); font-size: 0.8rem; margin-bottom: 14px; }
+
+.barras-sentimento { display: grid; gap: 6px; margin: 0 0 4px; }
+.barra-sentimento { display: grid; grid-template-columns: 80px 1fr 52px; align-items: center; gap: 10px; font-size: 0.9rem; }
+.barra-sentimento .valor { text-align: right; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.barra-neg div { background: var(--negativo); }
+.barra-neu div { background: var(--texto-suave); }
+
+.ficha-positiva { border-color: var(--destaque); background: var(--destaque-claro); }
+.ficha-negativa { border-color: var(--negativo); background: var(--negativo-claro); }
+.ficha-negacao { border-style: dashed; border-color: var(--atencao); background: var(--atencao-claro); }
+.ficha-intensificador { border-style: dashed; }
+
+.cartao .veredito { margin-top: 8px; font-size: 0.85rem; }
+.cartao .veredito-positivo { color: var(--destaque-escuro); }
+.cartao .veredito-negativo { color: var(--negativo); }
+.cartao strong.numero-negativo { color: var(--negativo); }
+.cartao strong.numero-neutro { color: var(--texto-suave); }
+.cartao .texto-curto { display: block; margin-top: 8px; font-size: 0.85rem; overflow-wrap: anywhere; }
+
+/* Matriz de confusão */
+.matriz td.celula { text-align: center; }
+.matriz td.diagonal { background: var(--destaque-claro); font-weight: 700; color: var(--destaque-escuro); }
+.matriz th.eixo { white-space: nowrap; }
 
 /* Rodapé */
 .rodape {

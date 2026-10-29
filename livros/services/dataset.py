@@ -100,10 +100,20 @@ def resumo_dataset(df: pd.DataFrame) -> dict:
     }
 
 
-def sortear_avaliacao(df: pd.DataFrame, minimo: int = 80, maximo: int = 500) -> str:
-    """Sorteia o texto de uma avaliação (de tamanho médio, boa para visualizar)."""
+def sortear_avaliacao_com_nota(df: pd.DataFrame, minimo: int = 80, maximo: int = 500):
+    """Sorteia uma avaliação (de tamanho médio) e devolve ``(texto, nota)``.
+
+    A nota vem de ``review/score`` e é ``None`` se a coluna não existir.
+    """
     textos = df["review/text"].fillna("")
     candidatos = textos[textos.str.len().between(minimo, maximo)]
     if candidatos.empty:
         candidatos = textos
-    return str(candidatos.sample(n=1).iloc[0])
+    indice = candidatos.sample(n=1).index[0]
+    nota = df.loc[indice, "review/score"] if "review/score" in df.columns else None
+    return str(textos.loc[indice]), nota
+
+
+def sortear_avaliacao(df: pd.DataFrame, minimo: int = 80, maximo: int = 500) -> str:
+    """Sorteia o texto de uma avaliação (de tamanho médio, boa para visualizar)."""
+    return sortear_avaliacao_com_nota(df, minimo, maximo)[0]

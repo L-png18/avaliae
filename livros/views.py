@@ -3,11 +3,21 @@ from functools import lru_cache
 from django.conf import settings
 from django.shortcuts import render
 
-from .services.dataset import carregar_dataset, resumo_dataset, sortear_avaliacao
+from .services.dataset import (
+    carregar_dataset,
+    resumo_dataset,
+    sortear_avaliacao,
+    sortear_avaliacao_com_nota,
+)
 from .services.preprocessamento import (
     RecursosNLTKIndisponiveis,
     executar_pipeline,
     resumo_corpus,
+)
+from .services.sentimento import (
+    analisar_texto,
+    classificar_nota,
+    resumo_sentimento_corpus,
 )
 
 TEXTO_EXEMPLO = (
@@ -30,15 +40,15 @@ ETAPAS = [
         "numero": 2,
         "titulo": "Pré-processamento de textos",
         "descricao": "Limpeza, minúsculas, tokenização, remoção de stopwords e lematização.",
-        "status": "proxima",
-        "status_texto": "Em andamento",
+        "status": "feito",
+        "status_texto": "Concluída",
     },
     {
         "numero": 3,
         "titulo": "Análise de sentimento",
         "descricao": "Classificar comentários como positivos ou negativos com o VADER.",
-        "status": "pendente",
-        "status_texto": "Pendente",
+        "status": "proxima",
+        "status_texto": "Em andamento",
     },
     {
         "numero": 4,
@@ -103,3 +113,41 @@ def corpus(request):
     except RecursosNLTKIndisponiveis as erro:
         contexto["erro_nltk"] = str(erro)
     return render(request, "livros/corpus.html", contexto)
+
+
+@lru_cache(maxsize=1)
+def _validacao_sentimento_em_cache(caminho):
+    """Roda o VADER em 3.000 avaliações (alguns segundos); guarda para as próximas visitas."""
+    return resumo_sentimento_corpus(carregar_dataset(caminho))
+
+
+def sentimento(request):
+    texto = request.GET.get("texto", "").strip()[:TAMANHO_MAXIMO_TEXTO]
+    nota_csv = None
+
+    if request.GET.get("sortear"):
+        texto, nota = sortear_avaliacao_com_nota(carregar_dataset(settings.DATA_PATH))
+        classe_nota = classificar_nota(nota)
+        if classe_nota:
+            nota_csv = {"nota": f"{float(nota):.0f}", "classe": classe_nota}
+    elif not texto:
+        texto = TEXTO_EXEMPLO
+
+    contexto = {"texto": texto, "nota_csv": nota_csv}
+    try:
+        resultado = analisar_texto(texto)
+        if nota_csv:
+            nota_csv["concorda"] = nota_csv["classe"] == resultado["original"]["classe"]
+        contexto["resultado"] = resultado
+    except RecursosNLTKIndisponiveis as erro:
+        contexto["erro_nltk"] = str(erro)
+    return render(request, "livros/sentimento.html", contexto)
+
+
+def sentimento_corpus(request):
+    contexto = {}
+    try:
+        contexto.update(_validacao_sentimento_em_cache(settings.DATA_PATH))
+    except RecursosNLTKIndisponiveis as erro:
+        contexto["erro_nltk"] = str(erro)
+    return render(request, "livros/sentimento_corpus.html", contexto)

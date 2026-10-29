@@ -1,0 +1,129 @@
+{% extends "livros/base.html" %}
+
+{% block titulo %}VADER x notas do CSV{% endblock %}
+
+{% block conteudo %}
+<h1>VADER x notas do CSV</h1>
+<p class="subtitulo">
+  Cada avaliação do CSV tem uma nota de 1 a 5. Aqui vemos se o VADER chega à mesma conclusão que o usuário.
+  <a href="{% url 'livros:sentimento' %}">Voltar à análise de um comentário</a>
+</p>
+
+{% if erro_nltk %}
+<div class="aviso aviso-erro" role="alert">
+  <strong>Não foi possível usar o NLTK.</strong>
+  <p>{{ erro_nltk }}</p>
+</div>
+{% else %}
+<p class="nota">
+  Calculado sobre a mesma amostra fixa de {{ total_textos }} avaliações da página do corpus. Para comparar, a nota vira
+  uma classe: 4 e 5 = positivo, 3 = neutro, 1 e 2 = negativo.
+</p>
+
+<section class="cartoes" aria-label="Acurácia do VADER" style="margin-top: 16px;">
+  <div class="cartao">
+    <strong>{{ acuracia_original.percentual }}</strong>
+    <span>de acerto no <b>texto original</b> ({{ acuracia_original.acertos }} de {{ acuracia_original.total }})</span>
+  </div>
+  <div class="cartao">
+    <strong>{{ acuracia_preprocessado.percentual }}</strong>
+    <span>de acerto no <b>texto pré-processado</b> ({{ acuracia_preprocessado.acertos }} de {{ acuracia_preprocessado.total }})</span>
+  </div>
+  <div class="cartao">
+    <strong>{{ efeito_preprocessamento.percentual }}</strong>
+    <span>das avaliações <b>mudaram de classe</b> depois do pré-processamento ({{ efeito_preprocessamento.total }} de {{ total_textos }})</span>
+  </div>
+</section>
+<p class="nota" style="margin-top: 8px;">
+  A acurácia só conta as notas 1, 2, 4 e 5 (a nota 3 é ambígua). Quando o VADER responde "neutro" para uma nota clara, conta como erro.
+</p>
+<p class="nota" style="margin-top: 8px;">
+  <strong>Pré-processar muda o resultado do VADER, mas nem sempre melhora.</strong>
+  Entre as {{ efeito_preprocessamento.claras }} avaliações com nota clara que mudaram de classe, o texto original
+  acertou {{ efeito_preprocessamento.original_acertou }} e o pré-processado acertou {{ efeito_preprocessamento.preprocessado_acertou }}.
+  Na etapa 4 (TF-IDF + classificador) o pré-processamento volta a ser usado, para reduzir o vocabulário; no VADER, a análise principal usa o texto como está.
+</p>
+
+<section>
+  <h2>Como o VADER classificou</h2>
+  <div class="tabela-rolavel">
+    <table>
+      <thead>
+        <tr><th>Classe</th><th class="num">Avaliações</th><th class="num">Parte do total</th><th>Distribuição</th></tr>
+      </thead>
+      <tbody>
+        {% for item in distribuicao %}
+        <tr>
+          <td><span class="veredito veredito-{{ item.classe }}">{{ item.classe|capfirst }}</span></td>
+          <td class="num">{{ item.total }}</td>
+          <td class="num">{{ item.percentual }}</td>
+          <td class="coluna-barra"><div class="barra{% if item.classe == 'negativo' %} barra-neg{% elif item.classe == 'neutro' %} barra-neu{% endif %}" role="img" aria-label="{{ item.largura }}% do total"><div style="width: {{ item.largura|stringformat:'d' }}%"></div></div></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>O que o VADER disse para cada nota</h2>
+  <p class="explicacao">
+    Cada linha é a nota do usuário e cada coluna é o que o VADER respondeu (no texto original).
+    A diagonal destacada são os acertos. A coluna "Acerto da linha" mostra, para cada nota, quantas o VADER acertou.
+  </p>
+  <div class="tabela-rolavel">
+    <table class="matriz">
+      <thead>
+        <tr>
+          <th class="eixo">Nota do CSV ↓ · VADER →</th>
+          {% for classe in classes %}<th class="num">{{ classe|capfirst }}</th>{% endfor %}
+          <th class="num">Total</th>
+          <th class="num">Acerto da linha</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in matriz %}
+        <tr>
+          <td><span class="veredito veredito-{{ linha.nota }}">{{ linha.nota|capfirst }}</span></td>
+          {% for celula in linha.celulas %}
+          <td class="num celula{% if celula.diagonal %} diagonal{% endif %}">{{ celula.valor }}</td>
+          {% endfor %}
+          <td class="num">{{ linha.total }}</td>
+          <td class="num">{{ linha.acerto }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="nota" style="margin-top: 8px;">
+    Repare que o dataset tem muito mais avaliações positivas do que negativas, então a acurácia geral pode esconder
+    um desempenho pior nas avaliações negativas.
+  </p>
+</section>
+
+<section>
+  <h2>Onde o VADER discordou da nota</h2>
+  <p class="explicacao">
+    Avaliações curtas em que a nota e o VADER ficaram em lados opostos (um positivo e outro negativo), das mais fortes
+    para as mais fracas. O VADER foi feito para textos curtos de redes sociais e olha o sentimento das palavras, não a
+    opinião final: um livro com resenha elogiosa de um assunto ruim, ou ironia, o confunde.
+  </p>
+  <div class="tabela-rolavel">
+    <table>
+      <thead><tr><th>Texto</th><th class="num">Nota</th><th>VADER</th></tr></thead>
+      <tbody>
+        {% for item in divergencias %}
+        <tr>
+          <td>{{ item.texto }}</td>
+          <td class="num">{{ item.nota }}</td>
+          <td><span class="veredito veredito-{{ item.classe }}">{{ item.classe|capfirst }}</span> <span class="nota">{{ item.compound }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3">Nenhuma divergência forte entre as avaliações curtas da amostra.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

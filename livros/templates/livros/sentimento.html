@@ -1,0 +1,129 @@
+{% extends "livros/base.html" %}
+
+{% block titulo %}Análise de sentimento{% endblock %}
+
+{% block conteudo %}
+<h1>Análise de sentimento com o VADER</h1>
+<p class="subtitulo">
+  Descubra se um comentário é positivo, negativo ou neutro. O VADER é um analisador
+  de sentimentos para <strong>inglês</strong>, como os textos do dataset.
+</p>
+
+<form class="formulario" method="get" action="{% url 'livros:sentimento' %}">
+  <label for="texto">Comentário</label>
+  <textarea id="texto" name="texto" rows="5" maxlength="5000" placeholder="Cole ou escreva um comentário em inglês">{{ texto }}</textarea>
+  <div class="acoes">
+    <button class="botao" type="submit">Analisar</button>
+    <button class="botao botao-secundario" type="submit" name="sortear" value="1">Sortear avaliação do CSV</button>
+  </div>
+</form>
+
+{% if erro_nltk %}
+<div class="aviso aviso-erro" role="alert">
+  <strong>Não foi possível usar o NLTK.</strong>
+  <p>{{ erro_nltk }}</p>
+</div>
+{% else %}
+<ol class="passos">
+  <li class="passo">
+    <h2>1. Texto analisado</h2>
+    <p class="bloco">{{ texto }}</p>
+    {% if nota_csv %}
+    <p class="rotulo">
+      Nota dada no CSV: <strong>{{ nota_csv.nota }}</strong>
+      (<span class="veredito veredito-{{ nota_csv.classe }}">{{ nota_csv.classe|capfirst }}</span>)
+      — {% if nota_csv.concorda %}o VADER concordou com a nota.{% else %}o VADER discordou da nota.{% endif %}
+    </p>
+    {% endif %}
+  </li>
+
+  <li class="passo">
+    <h2>2. Resultado do VADER</h2>
+    <p class="explicacao">
+      O VADER dá uma pontuação <code>neg</code>, <code>neu</code> e <code>pos</code> (a proporção do texto em cada
+      sentimento) e um <code>compound</code>, que resume tudo numa nota de -1 a +1. A classe sai do <code>compound</code>.
+    </p>
+    <div class="resultado-linha">
+      <span class="veredito veredito-{{ resultado.original.classe }}">{{ resultado.original.classe|capfirst }}</span>
+      <span class="numero">{{ resultado.original.compound_texto }}</span>
+      <span class="nota">compound</span>
+    </div>
+
+    <div class="medidor" role="img" aria-label="compound {{ resultado.original.compound_texto }}, numa escala de -1 a +1">
+      <div class="medidor-trilho"></div>
+      <div class="medidor-marca" style="left: {{ resultado.original.posicao|stringformat:'.1f' }}%"></div>
+    </div>
+    <div class="medidor-escala"><span>-1 (negativo)</span><span>0</span><span>+1 (positivo)</span></div>
+
+    <div class="barras-sentimento">
+      {% for barra in resultado.original.barras %}
+      <div class="barra-sentimento">
+        <span>{{ barra.rotulo }}</span>
+        <div class="barra barra-{{ barra.nome }}"><div style="width: {{ barra.largura|stringformat:'d' }}%"></div></div>
+        <span class="valor">{{ barra.valor }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="nota">
+      Regra do slide: <code>compound &gt; 0,05</code> → positivo · <code>compound &lt; -0,05</code> → negativo ·
+      entre os dois → neutro.
+    </p>
+  </li>
+
+  <li class="passo">
+    <h2>3. Palavras que pesaram <span class="contagem">{{ resultado.palavras|length }}</span></h2>
+    <p class="explicacao">
+      O VADER tem um léxico com a intensidade de cada palavra (de -4 a +4). Ele também ajusta a nota quando
+      encontra negações e intensificadores.
+    </p>
+    <p class="fichas">{% for p in resultado.palavras %}<span class="ficha ficha-{{ p.tipo }}">{{ p.palavra }}{% if p.valor %}<small>{{ p.valor }}</small>{% endif %}</span>{% empty %}<span class="nota">Nenhuma palavra do léxico foi encontrada neste texto.</span>{% endfor %}</p>
+    <p class="nota">
+      Verde: positiva · Vermelho: negativa · Tracejado laranja: negação · Tracejado: intensificador (<code>very</code>, <code>extremely</code>…).
+    </p>
+  </li>
+
+  <li class="passo">
+    <h2>4. E se o texto for pré-processado antes?</h2>
+    <p class="explicacao">
+      O VADER usa pontuação (<code>!!!</code>), MAIÚSCULAS, emoticons (<code>:(</code>) e a posição das negações para
+      ajustar a nota. O pré-processamento da etapa 2 apaga ou muda parte disso (e pode trocar uma palavra do léxico pelo
+      seu lema). Compare:
+    </p>
+
+    {% if resultado.preprocessado %}
+    <p class="rotulo">Texto depois do pré-processamento:</p>
+    <p class="bloco">{{ resultado.preprocessado.texto }}</p>
+
+    <div class="cartoes" style="margin-top: 14px;">
+      <div class="cartao">
+        <span>Texto original</span>
+        <strong class="numero-{{ resultado.original.classe }}">{{ resultado.original.compound_texto }}</strong>
+        <span class="veredito veredito-{{ resultado.original.classe }}">{{ resultado.original.classe|capfirst }}</span>
+      </div>
+      <div class="cartao">
+        <span>Texto pré-processado</span>
+        <strong class="numero-{{ resultado.preprocessado.classe }}">{{ resultado.preprocessado.compound_texto }}</strong>
+        <span class="veredito veredito-{{ resultado.preprocessado.classe }}">{{ resultado.preprocessado.classe|capfirst }}</span>
+      </div>
+    </div>
+
+    {% if resultado.diferenca.muda_classe %}
+    <div class="aviso aviso-atencao">
+      <strong>O pré-processamento mudou a classe</strong> deste texto (diferença de
+      {{ resultado.diferenca.compound }} no <code>compound</code>).
+    </div>
+    {% else %}
+    <div class="aviso aviso-info">
+      Neste texto a classe é a mesma (diferença de {{ resultado.diferenca.compound }} no <code>compound</code>).
+      Teste um comentário com <code>!!!</code>, MAIÚSCULAS ou um emoticon e veja a nota mudar.
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="nota">Depois do pré-processamento não sobrou nenhuma palavra para o VADER analisar.</p>
+    {% endif %}
+  </li>
+</ol>
+
+<p><a class="botao botao-secundario" href="{% url 'livros:sentimento_corpus' %}">Comparar o VADER com as notas do CSV</a></p>
+{% endif %}
+{% endblock %}

@@ -26,7 +26,7 @@ MSG_INSTALAR_NLTK = (
 )
 MSG_BAIXAR_NLTK = (
     "Não consegui baixar os recursos do NLTK automaticamente (verifique a "
-    "internet). Rode no terminal: python -m nltk.downloader stopwords wordnet omw-1.4"
+    "internet). Rode no terminal: python -m nltk.downloader stopwords wordnet omw-1.4 vader_lexicon"
 )
 
 # Palavras de negação. Na análise de sentimento elas importam: "not good" é
