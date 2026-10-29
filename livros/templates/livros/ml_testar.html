@@ -1,0 +1,102 @@
+{% extends "livros/base.html" %}
+
+{% block titulo %}Testar um comentário{% endblock %}
+
+{% block conteudo %}
+<h1>Testar um comentário</h1>
+<p class="subtitulo">
+  Escreva um comentário em inglês e veja o que cada modelo responde.
+  <a href="{% url 'livros:machine_learning' %}">Voltar aos resultados</a>
+</p>
+
+<form class="formulario" method="get" action="{% url 'livros:ml_testar' %}">
+  <label for="texto">Comentário</label>
+  <textarea id="texto" name="texto" rows="5" maxlength="5000" placeholder="Cole ou escreva um comentário em inglês">{{ texto }}</textarea>
+  <div class="acoes">
+    <button class="botao" type="submit">Classificar</button>
+    <button class="botao botao-secundario" type="submit" name="sortear" value="negativo">Sortear avaliação negativa do teste</button>
+    <button class="botao botao-secundario" type="submit" name="sortear" value="positivo">Sortear avaliação positiva do teste</button>
+  </div>
+  <p class="nota">As avaliações sorteadas vêm do conjunto de teste: os modelos nunca as viram durante o treino.</p>
+</form>
+
+{% if erro_nltk %}
+<div class="aviso aviso-erro" role="alert">
+  <strong>Não foi possível usar os modelos.</strong>
+  <p>{{ erro_nltk }}</p>
+</div>
+{% else %}
+<ol class="passos">
+  <li class="passo">
+    <h2>1. Comentário</h2>
+    <p class="bloco">{{ texto }}</p>
+    {% if classe_verdadeira %}
+    <p class="rotulo">
+      Classe verdadeira (pela nota do CSV):
+      <span class="veredito veredito-{{ classe_verdadeira }}">{{ classe_verdadeira|capfirst }}</span>
+    </p>
+    {% endif %}
+  </li>
+
+  <li class="passo">
+    <h2>2. Como o modelo enxerga o texto <span class="contagem">{{ resultado.palavras_conhecidas }} termos conhecidos</span></h2>
+    <p class="explicacao">O texto passa pelo pré-processamento da etapa 2 antes de virar vetor.</p>
+    <p class="bloco">{{ resultado.processado|default:"(nada sobrou do texto)" }}</p>
+  </li>
+
+  {% if resultado.sem_palavras %}
+  <li class="passo">
+    <div class="aviso aviso-atencao" style="margin: 0;">
+      <strong>Nenhuma palavra deste texto existe no vocabulário do modelo</strong>, então não há como classificar.
+      Escreva um comentário com mais palavras em inglês.
+    </div>
+  </li>
+  {% else %}
+  <li class="passo">
+    <h2>3. O que cada modelo responde</h2>
+    <div class="cartoes">
+      <div class="cartao">
+        <span>Naive Bayes</span>
+        <strong class="numero-{{ resultado.naive_bayes.classe }}">{{ resultado.naive_bayes.prob_negativo }}</strong>
+        <span>de chance de ser negativa</span>
+        <span class="veredito veredito-{{ resultado.naive_bayes.classe }}">{{ resultado.naive_bayes.classe|capfirst }}</span>
+        {% if resultado.acertos %}<span class="texto-curto">{% if resultado.acertos.naive_bayes %}Acertou{% else %}Errou{% endif %}</span>{% endif %}
+      </div>
+      <div class="cartao">
+        <span>SVM</span>
+        <strong class="numero-{{ resultado.svm.classe }}">{{ resultado.svm.margem }}</strong>
+        <span>margem (acima de 0 = negativa)</span>
+        <span class="veredito veredito-{{ resultado.svm.classe }}">{{ resultado.svm.classe|capfirst }}</span>
+        {% if resultado.acertos %}<span class="texto-curto">{% if resultado.acertos.svm %}Acertou{% else %}Errou{% endif %}</span>{% endif %}
+      </div>
+      <div class="cartao">
+        <span>VADER (etapa 3)</span>
+        <strong class="numero-{{ resultado.vader.classe }}">{{ resultado.vader.compound_texto }}</strong>
+        <span>compound</span>
+        <span class="veredito veredito-{{ resultado.vader.classe }}">{{ resultado.vader.classe|capfirst }}</span>
+        {% if resultado.acertos %}<span class="texto-curto">{% if resultado.acertos.vader %}Acertou{% else %}Errou{% endif %}</span>{% endif %}
+      </div>
+    </div>
+    <p class="nota" style="margin-top: 8px;">
+      As probabilidades do Naive Bayes costumam ser exageradas (muito perto de 0% ou 100%), então use-as para comparar,
+      não como certeza. No VADER, "neutro" conta como positivo ao comparar com a classe verdadeira.
+    </p>
+  </li>
+
+  <li class="passo">
+    <h2>4. O que pesou na decisão do SVM</h2>
+    <p class="explicacao">Peso do termo vezes o valor dele no texto. Sinal positivo empurra para negativo, e negativo empurra para positivo.</p>
+    <p class="rotulo">Empurram para negativo:</p>
+    <p class="fichas">{% for item in resultado.termos_negativos %}<span class="ficha ficha-negativa">{{ item.termo }}<small>{{ item.peso }}</small></span>{% empty %}<span class="nota">Nenhum termo.</span>{% endfor %}</p>
+    <p class="rotulo">Empurram para positivo:</p>
+    <p class="fichas">{% for item in resultado.termos_positivos %}<span class="ficha ficha-positiva">{{ item.termo }}<small>{{ item.peso }}</small></span>{% empty %}<span class="nota">Nenhum termo.</span>{% endfor %}</p>
+  </li>
+  {% endif %}
+</ol>
+
+<p class="nota">
+  Os modelos só conhecem "positivo" e "negativo" (a nota 3 ficou fora do treino), então um comentário neutro é sempre
+  empurrado para um dos dois lados.
+</p>
+{% endif %}
+{% endblock %}

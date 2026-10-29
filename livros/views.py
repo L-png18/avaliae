@@ -3,6 +3,13 @@ from functools import lru_cache
 from django.conf import settings
 from django.shortcuts import render
 
+from .services.classificador import (
+    ScikitLearnIndisponivel,
+    preparar_dataset,
+    prever,
+    sortear_avaliacao_de_teste,
+    treinar,
+)
 from .services.dataset import (
     carregar_dataset,
     resumo_dataset,
@@ -47,15 +54,15 @@ ETAPAS = [
         "numero": 3,
         "titulo": "Análise de sentimento",
         "descricao": "Classificar comentários como positivos ou negativos com o VADER.",
-        "status": "proxima",
-        "status_texto": "Em andamento",
+        "status": "feito",
+        "status_texto": "Concluída",
     },
     {
         "numero": 4,
         "titulo": "Machine Learning",
         "descricao": "Treinar um classificador com TF-IDF e testar novos comentários.",
-        "status": "pendente",
-        "status_texto": "Pendente",
+        "status": "feito",
+        "status_texto": "Concluída",
     },
 ]
 
@@ -151,3 +158,46 @@ def sentimento_corpus(request):
     except RecursosNLTKIndisponiveis as erro:
         contexto["erro_nltk"] = str(erro)
     return render(request, "livros/sentimento_corpus.html", contexto)
+
+
+@lru_cache(maxsize=1)
+def _treinamento_em_cache(caminho):
+    """Treina Naive Bayes e SVM (cerca de 15 s); guarda para as próximas visitas."""
+    dados, descartes = preparar_dataset(carregar_dataset(caminho))
+    return treinar(dados, descartes=descartes)
+
+
+def machine_learning(request):
+    contexto = {}
+    try:
+        contexto.update(_treinamento_em_cache(settings.DATA_PATH).resumo)
+    except (RecursosNLTKIndisponiveis, ScikitLearnIndisponivel) as erro:
+        contexto["erro_nltk"] = str(erro)
+    return render(request, "livros/machine_learning.html", contexto)
+
+
+def ml_testar(request):
+    texto = request.GET.get("texto", "").strip()[:TAMANHO_MAXIMO_TEXTO]
+    sortear = request.GET.get("sortear")
+    contexto = {"texto": texto, "classe_verdadeira": None}
+    try:
+        treinamento = _treinamento_em_cache(settings.DATA_PATH)
+        if sortear in ("negativo", "positivo"):
+            # sorteia só do conjunto de teste: o modelo nunca viu esses textos
+            texto, classe = sortear_avaliacao_de_teste(treinamento, sortear)
+            contexto.update({"texto": texto, "classe_verdadeira": classe})
+        elif not texto:
+            texto = TEXTO_EXEMPLO
+            contexto["texto"] = texto
+        resultado = prever(treinamento, texto)
+        if contexto["classe_verdadeira"] and "svm" in resultado:
+            verdadeira = contexto["classe_verdadeira"]
+            resultado["acertos"] = {
+                "naive_bayes": resultado["naive_bayes"]["classe"] == verdadeira,
+                "svm": resultado["svm"]["classe"] == verdadeira,
+                "vader": resultado["vader"]["binaria"] == verdadeira,
+            }
+        contexto["resultado"] = resultado
+    except (RecursosNLTKIndisponiveis, ScikitLearnIndisponivel) as erro:
+        contexto["erro_nltk"] = str(erro)
+    return render(request, "livros/ml_testar.html", contexto)

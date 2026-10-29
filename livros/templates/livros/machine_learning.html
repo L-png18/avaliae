@@ -1,0 +1,166 @@
+{% extends "livros/base.html" %}
+
+{% block titulo %}Machine Learning{% endblock %}
+
+{% block conteudo %}
+<h1>Machine Learning: aprender com as notas</h1>
+<p class="subtitulo">
+  Em vez de usar um dicionário pronto (como o VADER), o computador aprende, a partir de avaliações que já têm nota,
+  quais palavras indicam um comentário positivo ou negativo.
+  <a href="{% url 'livros:ml_testar' %}">Testar um comentário</a>
+</p>
+
+{% if erro_nltk %}
+<div class="aviso aviso-erro" role="alert">
+  <strong>Não foi possível treinar os modelos.</strong>
+  <p>{{ erro_nltk }}</p>
+</div>
+{% else %}
+<ol class="passos">
+  <li class="passo">
+    <h2>1. Rotular o dataset</h2>
+    <p class="explicacao" style="margin: 0;">A nota do CSV vira a classe: 4 e 5 = positivo, 1 e 2 = negativo. A nota 3 é ambígua e fica de fora.</p>
+  </li>
+  <li class="passo">
+    <h2>2. Converter os textos em vetores (TF-IDF)</h2>
+    <p class="explicacao" style="margin: 0;">
+      Cada avaliação (já pré-processada na etapa 2) vira uma lista de números: um para cada palavra ou par de palavras do
+      vocabulário. Termos que aparecem em poucas avaliações valem mais do que termos que aparecem em todas.
+    </p>
+  </li>
+  <li class="passo">
+    <h2>3. Treinar um classificador</h2>
+    <p class="explicacao" style="margin: 0;">
+      80% das avaliações treinam o modelo (Naive Bayes e SVM) e 20% ficam guardadas para o teste.
+      O modelo nunca vê o conjunto de teste durante o treino.
+    </p>
+  </li>
+  <li class="passo">
+    <h2>4. Aplicar o modelo a novos comentários</h2>
+    <p class="explicacao" style="margin: 0;">Veja em <a href="{% url 'livros:ml_testar' %}">Testar um comentário</a>.</p>
+  </li>
+</ol>
+
+<section>
+  <h2>Os dados</h2>
+  <div class="cartoes">
+    <div class="cartao"><strong>{{ dados.total }}</strong><span>avaliações usadas</span></div>
+    <div class="cartao"><strong>{{ dados.treino }}</strong><span>no treino</span></div>
+    <div class="cartao"><strong>{{ dados.teste }}</strong><span>no teste</span></div>
+    <div class="cartao"><strong>{{ dados.percentual_negativas }}</strong><span>são negativas</span></div>
+  </div>
+  <p class="nota" style="margin-top: 8px;">
+    De {{ dados.descartes.total }} avaliações do CSV, ficaram de fora {{ dados.descartes.neutras }} com nota 3,
+    {{ dados.descartes.repetidas }} com texto repetido (para não aparecerem no treino e no teste ao mesmo tempo)
+    e {{ dados.descartes.sem_dados }} sem texto ou sem nota.
+    O vocabulário do modelo tem {{ dados.vocabulario }} termos.
+  </p>
+</section>
+
+<section>
+  <h2>Resultados no conjunto de teste</h2>
+  <p class="explicacao">
+    Como só {{ dados.percentual_negativas }} das avaliações são negativas, a <strong>acurácia engana</strong>:
+    o modelo da primeira linha não aprende nada, responde sempre "positivo" e mesmo assim acerta {{ baseline_acuracia }}.
+    Por isso, ao lado da acurácia, medimos como cada modelo se sai justamente nas <strong>avaliações negativas</strong>.
+  </p>
+  <div class="tabela-rolavel">
+    <table>
+      <thead>
+        <tr>
+          <th>Modelo</th>
+          <th class="num">Acurácia</th>
+          <th class="num">Precisão (neg.)</th>
+          <th class="num">Revocação (neg.)</th>
+          <th class="num">F1 (neg.)</th>
+          <th>F1</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for modelo in modelos %}
+        <tr>
+          <td>
+            <strong>{{ modelo.nome }}</strong>{% if modelo.melhor %} <span class="veredito veredito-positivo">melhor F1</span>{% endif %}
+            <br><span class="nota">{{ modelo.descricao }}</span>
+          </td>
+          <td class="num">{{ modelo.acuracia }}</td>
+          <td class="num">{{ modelo.precisao }}</td>
+          <td class="num">{{ modelo.revocacao }}</td>
+          <td class="num"><strong>{{ modelo.f1 }}</strong></td>
+          <td class="coluna-barra"><div class="barra" role="img" aria-label="F1 de {{ modelo.f1 }}"><div style="width: {{ modelo.f1_largura|stringformat:'d' }}%"></div></div></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <ul class="legenda">
+    <li><strong>Precisão:</strong> das avaliações que o modelo chamou de negativas, quantas realmente eram.</li>
+    <li><strong>Revocação:</strong> das avaliações negativas de verdade, quantas o modelo encontrou.</li>
+    <li><strong>F1:</strong> junta as duas numa nota só; só é alta se precisão e revocação forem altas.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Onde cada modelo acertou e errou</h2>
+  <div class="tabela-rolavel">
+    <table>
+      <thead>
+        <tr>
+          <th>Modelo</th>
+          <th class="num">Negativas encontradas</th>
+          <th class="num">Negativas perdidas</th>
+          <th class="num">Falsos alarmes</th>
+          <th class="num">Positivas corretas</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for modelo in modelos %}
+        <tr>
+          <td>{{ modelo.nome }}</td>
+          <td class="num">{{ modelo.vp }}</td>
+          <td class="num">{{ modelo.fn }}</td>
+          <td class="num">{{ modelo.fp }}</td>
+          <td class="num">{{ modelo.vn }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="nota" style="margin-top: 8px;">
+    <em>Falso alarme</em> é uma avaliação positiva que o modelo chamou de negativa. O teste tem apenas
+    {{ dados.negativas_teste }} avaliações negativas, então diferenças de poucos pontos entre dois modelos podem ser sorte.
+  </p>
+</section>
+
+<section>
+  <h2>O que o modelo aprendeu</h2>
+  <p class="explicacao">
+    As palavras e pares de palavras com mais peso no SVM. Repare que as negações (<code>not</code>, <code>no</code>,
+    <code>don't</code>), mantidas na etapa 2, aparecem entre as mais negativas, e que um par como
+    <code>not disappoint</code> puxa para o lado positivo.
+  </p>
+  <div class="colunas-2">
+    <div class="passo">
+      <h2>Indicam avaliação negativa</h2>
+      <p class="fichas">{% for item in termos.negativos %}<span class="ficha ficha-negativa">{{ item.termo }}<small>{{ item.peso }}</small></span>{% endfor %}</p>
+    </div>
+    <div class="passo">
+      <h2>Indicam avaliação positiva</h2>
+      <p class="fichas">{% for item in termos.positivos %}<span class="ficha ficha-positiva">{{ item.termo }}<small>{{ item.peso }}</small></span>{% endfor %}</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Configuração usada</h2>
+  <ul class="legenda">
+    <li><strong>TF-IDF:</strong> {{ configuracao.tfidf }}.</li>
+    <li><strong>Naive Bayes:</strong> {{ configuracao.naive_bayes }}. Com a configuração padrão (<code>alpha = 1</code>), nos testes ele respondeu "positivo" para quase tudo, como o primeiro modelo da tabela.</li>
+    <li><strong>SVM:</strong> {{ configuracao.svm }}.</li>
+  </ul>
+  <p class="nota">Os valores foram escolhidos por validação cruzada só no conjunto de treino; o teste ficou guardado até a avaliação final.</p>
+</section>
+
+<p><a class="botao" href="{% url 'livros:ml_testar' %}">Testar um comentário</a></p>
+{% endif %}
+{% endblock %}
